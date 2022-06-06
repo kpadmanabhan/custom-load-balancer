@@ -12,13 +12,9 @@ Recommend doing a code walk-through for analyzing the solution.
   * Open solution in any IDE and execute it as a java application. Output is written to console.
 * For executing from terminal
   * Run the below commands to compile and execute 
-```java
-$ javac -d out src/main/InvocationPattern.java
-$ javac -d out src/main/providers/IProvider.java
-$ javac -d out -cp out src/main/providers/DefaultProvider.java
-$ javac -d out -cp out src/main/loadbalancer/LoadBalancer.java
-$ javac -d out -cp out src/main/CustomLoadBalancer.java
-$ java -cp out main.CustomLoadBalancer
+```
+        $ javac -d out -cp out src/main/*.java src/main/providers/*.java src/main/loadbalancer/*.java
+        $ java -cp out main.CustomLoadBalancer
 ```
 
 ## Notes

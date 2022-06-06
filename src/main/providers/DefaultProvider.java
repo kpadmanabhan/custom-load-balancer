@@ -9,7 +9,12 @@ public class DefaultProvider implements IProvider {
     private String providerId = UUID.randomUUID().toString();
 
     @Override
-    public String get() {
+    public String getId() {
         return providerId;
+    }
+
+    @Override
+    public String get() {
+        return getId();
     }
 }
