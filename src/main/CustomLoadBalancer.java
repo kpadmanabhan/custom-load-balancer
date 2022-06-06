@@ -3,6 +3,9 @@ package main;
 import main.loadbalancer.LoadBalancer;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class acts as the main entry point as well as the client hitting the load balancer
@@ -28,13 +31,21 @@ public class CustomLoadBalancer {
         System.out.println("-------------------------------------");
         System.out.println("Step 3 – Random invocation");
         System.out.println("-------------------------------------");
-        randomInvocation(100);
+        try {
+            randomInvocation(100);
+        } catch (LoadBalancerException e) {
+            System.err.println(e.getMessage());
+        }
 
         // Step 4 – Round Robin invocation
         System.out.println("-------------------------------------");
         System.out.println("Step 4 – Round Robin invocation");
         System.out.println("-------------------------------------");
-        roundRobinInvocation(100);
+        try {
+            roundRobinInvocation(100);
+        } catch (LoadBalancerException e) {
+            System.err.println(e.getMessage());
+        }
 
         // Step 5 – Manual node exclusion / inclusion
         System.out.println("-------------------------------------");
@@ -67,6 +78,17 @@ public class CustomLoadBalancer {
             System.err.println(e.getMessage());
             Thread.currentThread().interrupt();
         }
+
+        // Step 8 – Cluster Capacity Limit
+        System.out.println("-------------------------------------");
+        System.out.println("Step 8 – Cluster Capacity Limit");
+        System.out.println("-------------------------------------");
+        try {
+            invokeParallelRequests();
+        } catch (InterruptedException e) {
+            System.err.println(e.getMessage());
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static void registerProviders(int num) throws LoadBalancerException {
@@ -74,13 +96,13 @@ public class CustomLoadBalancer {
         loadBalancer.registerProviders(num);
     }
 
-    private static void randomInvocation(int times) {
+    private static void randomInvocation(int times) throws LoadBalancerException {
         for (int i = 0; i < times; i++) {
             System.out.println("Random invoke from loadbalancer : " + loadBalancer.get(InvocationPattern.RANDOM));
         }
     }
 
-    private static void roundRobinInvocation(int times) {
+    private static void roundRobinInvocation(int times) throws LoadBalancerException {
         for (int i = 0; i < times; i++) {
             System.out.println("Round-robin invoke from loadbalancer : " + loadBalancer.get(InvocationPattern.ROUND_ROBIN));
         }
@@ -137,5 +159,13 @@ public class CustomLoadBalancer {
         }
         System.in.read();
         loadBalancer.stop();
+    }
+
+    private static void invokeParallelRequests() throws InterruptedException {
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+        executorService.execute(loadBalancer);
+        loadBalancer.awaitCompletion();
+        executorService.shutdown();
+        executorService.awaitTermination(10, TimeUnit.SECONDS);
     }
 }

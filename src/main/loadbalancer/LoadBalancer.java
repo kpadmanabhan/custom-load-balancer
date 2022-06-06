@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Singleton LoadBalancer
  */
-public class LoadBalancer {
+public class LoadBalancer implements Runnable {
     // private constructor for singleton implementation
     private LoadBalancer() {
     }
@@ -31,6 +31,7 @@ public class LoadBalancer {
 
 
     private static final int MAX_PROVIDERS = 10;
+    private static final int MAX_CALLS_PER_PROVIDER = 5;
     private static final int HEALTH_CHECK_SCHEDULE_IN_SEC = 5;
 
     /**
@@ -52,6 +53,7 @@ public class LoadBalancer {
     private ScheduledFuture<?> scheduledFuture;
 
     private int lastInvokedProviderIndex = -1;
+    private int activeRunningCalls = 0;
 
     /**
      * Invoke this method to start LoadBalancer
@@ -137,7 +139,15 @@ public class LoadBalancer {
      * @param invocationPattern RANDOM or ROUND-ROBIN
      * @return result of method invocation from provider
      */
-    public String get(InvocationPattern invocationPattern) {
+    public synchronized String get(InvocationPattern invocationPattern) throws LoadBalancerException {
+        activeRunningCalls++;
+        notifyAll();
+
+        if (activeRunningCalls > MAX_CALLS_PER_PROVIDER * providers.size()) {
+            activeRunningCalls--;
+            throw new LoadBalancerException("Max cluster limit exceeded. Cannot execute call...");
+        }
+
         if (invocationPattern == InvocationPattern.RANDOM) {
             // invoke get() of a random provider
             return getRandomProvider().get();
@@ -147,6 +157,12 @@ public class LoadBalancer {
             // invoke get() of next sequential provider
             return getNextProvider().get();
         }
+
+        activeRunningCalls--;
+        if (activeRunningCalls < 0) {
+            activeRunningCalls = 0;
+        }
+        notifyAll();
 
         return null;
     }
@@ -221,5 +237,33 @@ public class LoadBalancer {
         }
         var nextProviderKey = providers.keySet().toArray()[lastInvokedProviderIndex];
         return providers.get(nextProviderKey);
+    }
+
+    /**
+     * When an object implementing interface <code>Runnable</code> is used
+     * to create a thread, starting the thread causes the object's
+     * <code>run</code> method to be called in that separately executing
+     * thread.
+     * <p>
+     * The general contract of the method <code>run</code> is that it may
+     * take any action whatsoever.
+     *
+     * @see Thread#run()
+     */
+    @Override
+    public void run() {
+        for (int i = 0; i < 100; i++) {
+            try {
+                get(InvocationPattern.RANDOM);
+            } catch (LoadBalancerException e) {
+                System.err.println(e.getMessage());
+            }
+        }
+    }
+
+    public synchronized void awaitCompletion() throws InterruptedException {
+        while (activeRunningCalls > 0) {
+            wait();
+        }
     }
 }
