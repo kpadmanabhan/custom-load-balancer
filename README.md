@@ -1,11 +1,15 @@
 # custom-load-balancer
-A custom load balancer approach.<br><br>
-This is a sample written as a java console application as instructions specifically mention NOT to use any frameworks. A real-world-like separation would be to have these as individual springboot applications managed using a dependency management tool like maven or gradle. 
+A custom load balancer approach.<br>
 
-## Code walk-through
-Steps (except Step 1) are coded within the [CustomLoadBalancer class](src/main/CustomLoadBalancer.java) sequentially. 
-Enough comments written inside to explain the implementation and its rationale. 
-Recommend doing a code walk-through for analyzing the solution.
+This is a sample written as a java console application as instructions specifically mention NOT to use any frameworks. A real-world-like separation would be to have these as individual springboot applications with dependency management using maven or gradle.<br>
+
+All output is written to console for simplicity purposes. In real world, rotating logs to log files using logback or log4j based logging will be ideal.
+
+## Evaluation
+* Highly recommend doing a code walk-through for evaluation.
+* Steps (except Step 1) are coded within the [CustomLoadBalancer class](src/main/CustomLoadBalancer.java) sequentially. 
+* Enough comments written inside to explain the implementation and its rationale.
+* After or while execution, trace calls by searching for the provider id in the console.
 
 ## Execution
 * Clone the repo to local

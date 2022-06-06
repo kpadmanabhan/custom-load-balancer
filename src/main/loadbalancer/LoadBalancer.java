@@ -43,6 +43,11 @@ public class LoadBalancer {
      */
     private final Map<String, IProvider> excludedProviders = new HashMap<>();
 
+    /**
+     * Keeps track of health check status for unhealthy providers
+     */
+    private final Map<String, Integer> healthCheckStatusForExcludedProviders = new HashMap<>();
+
     private ScheduledExecutorService executorService;
     private ScheduledFuture<?> scheduledFuture;
 
@@ -51,25 +56,62 @@ public class LoadBalancer {
     /**
      * Invoke this method to start LoadBalancer
      */
-    public void start() {
+    public void start(boolean isOptimizedHealthCheck) {
         Runnable healthCheck = () -> {
-            var iterator = providers.entrySet().iterator();
-            while (iterator.hasNext()) {
-                var entry = iterator.next();
-                if (!entry.getValue().check()) {
-                    System.out.println("Unhealthy provider. Excluding from load balancer: " + entry.getKey());
-                    // remove from active providers and add it to excluded providers
-                    iterator.remove();
-                    excludedProviders.putIfAbsent(entry.getValue().getId(), entry.getValue());
-                } else {
-                    System.out.println("Healthy provider: " + entry.getKey());
-                }
+            excludeUnhealthyProviders();
+            if (isOptimizedHealthCheck) {
+                includeHealthyProviders();
             }
-            System.out.println("Active provider count: " + providers.size());
+            System.out.println("*** Active provider count: " + providers.size());
         };
 
         executorService = Executors.newScheduledThreadPool(1);
         scheduledFuture = executorService.scheduleAtFixedRate(healthCheck, 0, HEALTH_CHECK_SCHEDULE_IN_SEC, TimeUnit.SECONDS);
+    }
+
+    private void includeHealthyProviders() {
+        var iterator = excludedProviders.entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            if (entry.getValue().check()) {
+                // health check success. healthy provider
+                System.out.println("optimized check: Heartbeat success for excluded provider: " + entry.getKey());
+                var count = healthCheckStatusForExcludedProviders.get(entry.getKey());
+                healthCheckStatusForExcludedProviders.put(entry.getKey(), ++count);
+                if (healthCheckStatusForExcludedProviders.get(entry.getKey()) >= 2) {
+                    // 2 consecutive heartbeat success. include this provider to active providers
+                    System.out.println("2 consecutive heartbeat success. Including provider to active providers: " + entry.getKey());
+                    iterator.remove();
+                    healthCheckStatusForExcludedProviders.remove(entry.getKey());
+                    providers.putIfAbsent(entry.getKey(), entry.getValue());
+                }
+            } else {
+                // health check fail. unhealthy provider
+                System.out.println("optimized check: Heartbeat failure for excluded provider: " + entry.getKey());
+                var count = healthCheckStatusForExcludedProviders.get(entry.getKey());
+                count--;
+                if (count < 0) {
+                    count = 0;
+                }
+                healthCheckStatusForExcludedProviders.put(entry.getKey(), count);
+            }
+        }
+    }
+
+    private void excludeUnhealthyProviders() {
+        var iterator = providers.entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            if (!entry.getValue().check()) {
+                System.out.println("basic check: Unhealthy provider. Excluding from load balancer: " + entry.getKey());
+                // remove from active providers and add it to excluded providers
+                iterator.remove();
+                excludedProviders.putIfAbsent(entry.getValue().getId(), entry.getValue());
+                healthCheckStatusForExcludedProviders.putIfAbsent(entry.getValue().getId(), 0);
+            } else {
+                System.out.println("basic check: Healthy provider: " + entry.getKey());
+            }
+        }
     }
 
     public void stop() throws InterruptedException {
@@ -145,6 +187,7 @@ public class LoadBalancer {
         }
 
         // remove from excluded providers and add it to active providers
+        healthCheckStatusForExcludedProviders.remove(providerKey);
         var provider = excludedProviders.remove(providerKey);
         providers.putIfAbsent(provider.getId(), provider);
     }
@@ -162,6 +205,7 @@ public class LoadBalancer {
         // remove from active providers and add it to excluded providers
         var provider = providers.remove(providerKey);
         excludedProviders.putIfAbsent(provider.getId(), provider);
+        healthCheckStatusForExcludedProviders.putIfAbsent(provider.getId(), 0);
     }
 
     private IProvider getRandomProvider() {

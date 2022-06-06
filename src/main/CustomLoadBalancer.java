@@ -56,6 +56,17 @@ public class CustomLoadBalancer {
             System.err.println(e.getMessage());
             Thread.currentThread().interrupt();
         }
+
+        // Step 7 – Improving Heart beat checker
+        System.out.println("-------------------------------------");
+        System.out.println("Step 7 – Improving Heart beat checker");
+        System.out.println("-------------------------------------");
+        try {
+            optimizedHeartbeat();
+        } catch (IOException | InterruptedException e) {
+            System.err.println(e.getMessage());
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static void registerProviders(int num) throws LoadBalancerException {
@@ -107,10 +118,24 @@ public class CustomLoadBalancer {
         System.out.println("******** Starting LoadBalancer run. Press ENTER key to STOP run... ********");
         System.out.println("***************************************************************************");
 
-        loadBalancer.start();
+        loadBalancer.start(false);
         while (System.in.available() == 0) {
             // do nothing. wait until key press
         }
+        System.in.read();
+        loadBalancer.stop();
+    }
+
+    private static void optimizedHeartbeat() throws IOException, InterruptedException {
+        System.out.println("************************************************************************************************");
+        System.out.println("******** Starting LoadBalancer with optimized heartbeat. Press ENTER key to STOP run... ********");
+        System.out.println("************************************************************************************************");
+
+        loadBalancer.start(true);
+        while (System.in.available() == 0) {
+            // do nothing. wait until key press
+        }
+        System.in.read();
         loadBalancer.stop();
     }
 }
