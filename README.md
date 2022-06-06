@@ -1,5 +1,6 @@
-# custom load-balancer
-A custom load balancer approach. This is a sample written as a java console application
+# custom-load-balancer
+A custom load balancer approach.<br><br>
+This is a sample written as a java console application as instructions specifically mention NOT to use any frameworks. A real-world-like separation would be to have these as individual springboot applications managed using a dependency management tool like maven or gradle. 
 
 ## Code walk-through
 Steps (except Step 1) are coded within the [CustomLoadBalancer class](src/main/CustomLoadBalancer.java) sequentially. 
