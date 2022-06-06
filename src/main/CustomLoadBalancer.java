@@ -2,6 +2,8 @@ package main;
 
 import main.loadbalancer.LoadBalancer;
 
+import java.io.IOException;
+
 /**
  * This class acts as the main entry point as well as the client hitting the load balancer
  */
@@ -42,6 +44,17 @@ public class CustomLoadBalancer {
             includeAndExcludeProvider();
         } catch (LoadBalancerException e) {
             System.err.println(e.getMessage());
+        }
+
+        // Step 6 – Heart beat checker
+        System.out.println("-------------------------------------");
+        System.out.println("Step 6 – Heart beat checker");
+        System.out.println("-------------------------------------");
+        try {
+            heartbeat();
+        } catch (IOException | InterruptedException e) {
+            System.err.println(e.getMessage());
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -87,5 +100,17 @@ public class CustomLoadBalancer {
             loadBalancer.includeProvider(provider1);
         }
         System.out.println("Active provider count after include: " + loadBalancer.getActiveProviderKeys().size());
+    }
+
+    private static void heartbeat() throws IOException, InterruptedException {
+        System.out.println("***************************************************************************");
+        System.out.println("******** Starting LoadBalancer run. Press ENTER key to STOP run... ********");
+        System.out.println("***************************************************************************");
+
+        loadBalancer.start();
+        while (System.in.available() == 0) {
+            // do nothing. wait until key press
+        }
+        loadBalancer.stop();
     }
 }

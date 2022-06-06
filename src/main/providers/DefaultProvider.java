@@ -1,5 +1,6 @@
 package main.providers;
 
+import java.util.Random;
 import java.util.UUID;
 
 public class DefaultProvider implements IProvider {
@@ -16,5 +17,10 @@ public class DefaultProvider implements IProvider {
     @Override
     public String get() {
         return getId();
+    }
+
+    @Override
+    public boolean check() {
+        return new Random().nextBoolean();
     }
 }

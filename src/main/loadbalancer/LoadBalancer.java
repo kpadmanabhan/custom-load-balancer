@@ -6,6 +6,10 @@ import main.providers.DefaultProvider;
 import main.providers.IProvider;
 
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Singleton LoadBalancer
@@ -27,6 +31,8 @@ public class LoadBalancer {
 
 
     private static final int MAX_PROVIDERS = 10;
+    private static final int HEALTH_CHECK_SCHEDULE_IN_SEC = 5;
+
     /**
      * All registered providers that are active
      */
@@ -37,7 +43,51 @@ public class LoadBalancer {
      */
     private final Map<String, IProvider> excludedProviders = new HashMap<>();
 
+    private ScheduledExecutorService executorService;
+    private ScheduledFuture<?> scheduledFuture;
+
     private int lastInvokedProviderIndex = -1;
+
+    /**
+     * Invoke this method to start LoadBalancer
+     */
+    public void start() {
+        Runnable healthCheck = () -> {
+            var iterator = providers.entrySet().iterator();
+            while (iterator.hasNext()) {
+                var entry = iterator.next();
+                if (!entry.getValue().check()) {
+                    System.out.println("Unhealthy provider. Excluding from load balancer: " + entry.getKey());
+                    // remove from active providers and add it to excluded providers
+                    iterator.remove();
+                    excludedProviders.putIfAbsent(entry.getValue().getId(), entry.getValue());
+                } else {
+                    System.out.println("Healthy provider: " + entry.getKey());
+                }
+            }
+            System.out.println("Active provider count: " + providers.size());
+        };
+
+        executorService = Executors.newScheduledThreadPool(1);
+        scheduledFuture = executorService.scheduleAtFixedRate(healthCheck, 0, HEALTH_CHECK_SCHEDULE_IN_SEC, TimeUnit.SECONDS);
+    }
+
+    public void stop() throws InterruptedException {
+        System.out.println("Stop triggered. Waiting for running tasks to complete...");
+        if (executorService == null || scheduledFuture == null) {
+            return;
+        }
+
+        if (!scheduledFuture.isCancelled()) {
+            scheduledFuture.cancel(true);
+        }
+
+        if (!executorService.isShutdown()) {
+            executorService.shutdown();
+        }
+
+        executorService.awaitTermination(10, TimeUnit.SECONDS);
+    }
 
     /**
      * Invoke a method on one of the providers

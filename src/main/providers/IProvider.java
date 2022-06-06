@@ -4,4 +4,6 @@ public interface IProvider {
     String getId();
 
     String get();
+
+    boolean check();
 }
