@@ -41,6 +41,7 @@ public class LoadBalancer {
 
     /**
      * Invoke a method on one of the providers
+     *
      * @param invocationPattern RANDOM or ROUND-ROBIN
      * @return result of method invocation from provider
      */
@@ -60,10 +61,11 @@ public class LoadBalancer {
 
     /**
      * Register providers
+     *
      * @param num number of providers to register
      */
     public void registerProviders(int num) throws LoadBalancerException {
-        for (int i=0; i<num; i++) {
+        for (int i = 0; i < num; i++) {
             if (providers.size() >= MAX_PROVIDERS) {
                 throw new LoadBalancerException("Loadbalancer is running at max capacity. Consider removing some providers");
             }
@@ -75,6 +77,7 @@ public class LoadBalancer {
 
     /**
      * Returns all active providers
+     *
      * @return
      */
     public List<String> getActiveProviderKeys() {
@@ -83,6 +86,7 @@ public class LoadBalancer {
 
     /**
      * Add a specific provider into the loadbalancer
+     *
      * @param providerKey Provider key of provider to be included into load balancer
      */
     public void includeProvider(String providerKey) throws LoadBalancerException {
@@ -97,6 +101,7 @@ public class LoadBalancer {
 
     /**
      * Remove a specific provider into the loadbalancer
+     *
      * @param providerKey Provider key of provider to be excluded from load balancer
      */
     public void excludeProvider(String providerKey) throws LoadBalancerException {
@@ -116,11 +121,11 @@ public class LoadBalancer {
 
     private IProvider getNextProvider() {
         // if last provider is invoked, start from 0 again, else invoke next provider
-        var providerIndex =
-                lastInvokedProviderIndex == providers.size() - 1 ?
-                        0:
-                        ++lastInvokedProviderIndex;
-        var nextProviderKey = providers.keySet().toArray()[providerIndex];
+        lastInvokedProviderIndex++;
+        if (lastInvokedProviderIndex >= providers.size()) {
+            lastInvokedProviderIndex = 0;
+        }
+        var nextProviderKey = providers.keySet().toArray()[lastInvokedProviderIndex];
         return providers.get(nextProviderKey);
     }
 }
